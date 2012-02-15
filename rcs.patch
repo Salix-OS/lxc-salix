@@ -1,0 +1,100 @@
+--- rc.S.orig	2012-02-15 11:22:53.000000000 +0100
++++ rc.S	2012-02-15 14:17:18.000000000 +0100
+@@ -6,6 +6,10 @@
+ #
+ # Tweaked for Salix by George Vlahavas <vlahavas~at~gmail~dot~com>
+ 
++# Tweaked for Salix container by Frédéric Galusik <fredg~at~salixos~dot~org>
++# based on the tweak for a slackware container
++# by ponce <matteo.bernardini@gmail.com>
++
+ # modified for colorized screen messages and local needs
+ . /etc/shell-colors
+ 
+@@ -13,8 +17,14 @@
+ echo
+ echo -e "${BOLDYELLOW}Initializing.${COLOR_RESET}"
+ 
++# a check for a container variable is made to jump unneeded sections
++CONTAINER=yes
++
+ PATH=/sbin:/usr/sbin:/bin:/usr/bin
+ 
++# container check
++if [ ! $CONTAINER ]; then
++
+ # Try to mount /proc:
+ echo -e "${BOLDCYAN}Mounting proc filesystem:${COLOR_RESET}"
+ /sbin/mount -v proc /proc -n -t proc 2> /dev/null
+@@ -255,17 +265,28 @@
+   read junk;
+ fi # Done checking root filesystem
+ 
++fi # end container check
++
+ # Any /etc/mtab that exists here is old, so we delete it to start over:
+ /bin/rm -f /etc/mtab*
++
++# container check
++if [ ! $CONTAINER ]; then
++
+ # Remounting the / partition will initialize the new /etc/mtab:
+ echo -e "${BOLDCYAN}Creating /etc/mtab.${COLOR_RESET}"
+ /sbin/mount -w -o remount /
+ 
++fi # end container check
++
+ # Read in the correct / filesystem complete with arguments so mount will
+ # show them correctly. This does not stop those arguments from functioning
+ # but does prevent a small bug with /etc/mtab.
+ /bin/grep ' / ' /proc/mounts | grep -v "^rootfs" > /etc/mtab
+ 
++# container check
++if [ ! $CONTAINER ]; then
++
+ # Fix /etc/mtab to list sys and proc if they were not yet entered in
+ # /etc/mtab because / was still mounted read-only:
+ if [ -d /proc/sys ]; then
+@@ -345,6 +366,8 @@
+ # mounted read-write.
+ /sbin/swapon -a 2> /dev/null
+ 
++fi # end container check
++
+ # Clean up some temporary files:
+ rm -f /var/run/* /var/run/*/* /var/run/*/*/* /etc/nologin \
+   /etc/dhcpc/*.pid /etc/forcefsck /etc/fastboot \
+@@ -372,7 +395,7 @@
+ # if the first line of that file begins with the word 'Linux'.
+ # You are free to modify the rest of the file as you see fit.
+ if [ -x /bin/sed ]; then
+-  /bin/sed -i "{1s/^Linux.*/$(/bin/uname -sr)\./}" /etc/motd
++  /bin/sed -i "{1s/^Linux.*/$(/bin/uname -sr) lxc container\./}" /etc/motd
+ fi
+ 
+ # If there are SystemV init scripts for this runlevel, run them.
+@@ -380,6 +403,9 @@
+   /bin/sh /etc/rc.d/rc.sysvinit
+ fi
+ 
++# container check
++if [ ! $CONTAINER ]; then
++
+ # Run serial port setup script:
+ # CAREFUL!  This can make some systems hang if the rc.serial script isn't
+ # set up correctly.  If this happens, you may have to edit the file from a
+@@ -388,6 +414,8 @@
+   /bin/sh /etc/rc.d/rc.serial start
+ fi
+ 
++fi # end container check
++
+ # Carry an entropy pool between reboots to improve randomness.
+ if [ -f /etc/random-seed ]; then
+   echo -e "${BOLDWHITE}Using /etc/random-seed to initialize /dev/urandom.${COLOR_RESET}"
+@@ -401,3 +429,5 @@
+ fi
+ chmod 600 /etc/random-seed
+ 
++#
++# vim: set ft=sh: 
