@@ -53,7 +53,7 @@ echo "Configuring..." ; echo
 
 # the next part contains excerpts taken from SeTconfig (written by
 # Patrick Volkerding) from the slackware setup disk.
-# but before pasting them just set a variable to use them as they are 
+# but before pasting them just set a variable to use them as they are
 
 T_PX=$rootfs
 
@@ -101,24 +101,29 @@ cp $rootfs/etc/HOSTNAME $rootfs/etc/hostname
 DEV=$rootfs/dev
 
 mkdir -p ${DEV}
-mknod -m 666 ${DEV}/null c 1 3
-mknod -m 666 ${DEV}/zero c 1 5
-mknod -m 666 ${DEV}/random c 1 8
-mknod -m 666 ${DEV}/urandom c 1 9
-mkdir -m 755 ${DEV}/pts
-mkdir -m 1777 ${DEV}/shm
-mknod -m 666 ${DEV}/tty c 5 0
-mknod -m 600 ${DEV}/console c 5 1
-mknod -m 666 ${DEV}/tty0 c 4 0
-mknod -m 666 ${DEV}/tty1 c 4 1
-mknod -m 666 ${DEV}/tty2 c 4 2
-mknod -m 666 ${DEV}/tty3 c 4 3
-mknod -m 666 ${DEV}/tty4 c 4 4
-mknod -m 666 ${DEV}/tty5 c 4 5
-mknod -m 666 ${DEV}/full c 1 7
-mknod -m 600 ${DEV}/initctl p
-mknod -m 660 ${DEV}/loop0 b 7 0
-mknod -m 660 ${DEV}/loop1 b 7 1
+mkdir -m 755 -p ${DEV}/pts
+mkdir -m 1777 -p ${DEV}/shm
+
+# check if device exists before creating it
+
+[ ! -c ${DEV}/null ] && mknod -m 666 ${DEV}/null c 1 3
+[ ! -c ${DEV}/zero ] && mknod -m 666 ${DEV}/zero c 1 5
+[ ! -c ${DEV}/random ] && mknod -m 666 ${DEV}/random c 1 8
+[ ! -c ${DEV}/urandom ] && mknod -m 666 ${DEV}/urandom c 1 9
+[ ! -c ${DEV}/tty ] && mknod -m 666 ${DEV}/tty c 5 0
+[ ! -c ${DEV}/console ] && mknod -m 600 ${DEV}/console c 5 1
+[ ! -c ${DEV}/tty0 ] && mknod -m 666 ${DEV}/tty0 c 4 0
+[ ! -c ${DEV}/tty1 ] && mknod -m 666 ${DEV}/tty1 c 4 1
+[ ! -c ${DEV}/tty2 ] && mknod -m 666 ${DEV}/tty2 c 4 2
+[ ! -c ${DEV}/tty3 ] && mknod -m 666 ${DEV}/tty3 c 4 3
+[ ! -c ${DEV}/tty4 ] && mknod -m 666 ${DEV}/tty4 c 4 4
+[ ! -c ${DEV}/tty5 ] && mknod -m 666 ${DEV}/tty5 c 4 5
+[ ! -c ${DEV}/full ] && mknod -m 666 ${DEV}/full c 1 7
+[ ! -p ${DEV}/initctl ] && mknod -m 600 ${DEV}/initctl p
+[ ! -b ${DEV}/loop0 ] && mknod -m 660 ${DEV}/loop0 b 7 0
+[ ! -b ${DEV}/loop1 ] && mknod -m 660 ${DEV}/loop1 b 7 1
+
+rm ${DEV}/ptmx
 ln -s pts/ptmx ${DEV}/ptmx
 
 echo "Adding an etc/fstab that must be edited later"
@@ -131,13 +136,15 @@ none /dev/shm tmpfs  defaults 0 0
 EOF
 
 # disable pointless services in a container
-chmod -x $rootfs/etc/rc.d/rc.{udev,loop}
+# remove rc.loop from orig : not found
+chmod -x $rootfs/etc/rc.d/rc.udev
+
 
 # simplify rc.6 and rc.S, http://www.vislab.uq.edu.au/howto/lxc/create_container.html
 # and some other small fixes for a clean boot
 cat >$rootfs/tmp/rcs.patch <<'EOF'
---- ./etc/rc.d/rc.S.orig	2011-07-20 10:18:27.956637848 +0200
-+++ ./etc/rc.d/rc.S	2011-07-20 11:14:26.553649659 +0200
+--- ./etc/rc.d/rc.S.orig    2011-07-20 10:18:27.956637848 +0200
++++ ./etc/rc.d/rc.S 2011-07-20 11:14:26.553649659 +0200
 @@ -4,9 +4,18 @@
  #
  # Mostly written by:  Patrick J. Volkerding, <volkerdi@slackware.com>
@@ -148,19 +155,19 @@ cat >$rootfs/tmp/rcs.patch <<'EOF'
 +# a check for a container variable is made to jump unneeded sections
 +
 +CONTAINER=yes
- 
+
  PATH=/sbin:/usr/sbin:/bin:/usr/bin
- 
+
 +# container check
 +if [ ! $CONTAINER ]; then
 +
  # Try to mount /proc:
  /sbin/mount -v proc /proc -n -t proc 2> /dev/null
- 
+
 @@ -250,16 +259,27 @@
    read junk;
  fi # Done checking root filesystem
- 
+
 +fi # end container check
 +
  # Any /etc/mtab that exists here is old, so we delete it to start over:
@@ -171,14 +178,14 @@ cat >$rootfs/tmp/rcs.patch <<'EOF'
 +
  # Remounting the / partition will initialize the new /etc/mtab:
  /sbin/mount -w -o remount /
- 
+
 +fi # end container check
 +
  # Read in the correct / filesystem complete with arguments so mount will
  # show them correctly. This does not stop those arguments from functioning
  # but does prevent a small bug with /etc/mtab.
  /bin/grep ' / ' /proc/mounts | grep -v "^rootfs" > /etc/mtab
- 
+
 +# container check
 +if [ ! $CONTAINER ]; then
 +
@@ -188,7 +195,7 @@ cat >$rootfs/tmp/rcs.patch <<'EOF'
 @@ -337,6 +357,8 @@
  # mounted read-write.
  /sbin/swapon -a 2> /dev/null
- 
+
 +fi # end container check
 +
  # Clean up some temporary files:
@@ -201,12 +208,12 @@ cat >$rootfs/tmp/rcs.patch <<'EOF'
 -  /bin/sed -i "{1s/^Linux.*/$(/bin/uname -sr)\./}" /etc/motd
 +  /bin/sed -i "{1s/^Linux.*/$(/bin/uname -sr) lxc container\./}" /etc/motd
  fi
- 
+
  # If there are SystemV init scripts for this runlevel, run them.
 @@ -372,6 +394,9 @@
    . /etc/rc.d/rc.sysvinit
  fi
- 
+
 +# container check
 +if [ ! $CONTAINER ]; then
 +
@@ -216,16 +223,16 @@ cat >$rootfs/tmp/rcs.patch <<'EOF'
 @@ -380,6 +405,8 @@
    sh /etc/rc.d/rc.serial start
  fi
- 
+
 +fi # end container check
 +
  # Carry an entropy pool between reboots to improve randomness.
  if [ -f /etc/random-seed ]; then
    echo "Using /etc/random-seed to initialize /dev/urandom."
---- ./etc/rc.d/rc.6.orig	2011-07-20 10:18:24.478681336 +0200
-+++ ./etc/rc.d/rc.6	2011-07-20 11:14:26.553649659 +0200
+--- ./etc/rc.d/rc.6.orig    2011-07-20 10:18:24.478681336 +0200
++++ ./etc/rc.d/rc.6 2011-07-20 11:14:26.553649659 +0200
 @@ -9,6 +9,12 @@
- # Author:	Miquel van Smoorenburg <miquels@drinkel.nl.mugnet.org>
+ # Author:  Miquel van Smoorenburg <miquels@drinkel.nl.mugnet.org>
  # Modified by:  Patrick J. Volkerding, <volkerdi@slackware.com>
  #
 +# tweaks for an lxc container by ponce <matteo.bernardini@gmail.com>,
@@ -234,13 +241,13 @@ cat >$rootfs/tmp/rcs.patch <<'EOF'
 +# a check for a container variable is made to jump unneeded sections
 +
 +CONTAINER=yes
- 
+
  # Set the path.
  PATH=/sbin:/etc:/bin:/usr/bin
 @@ -37,6 +43,9 @@
- 		;;
+        ;;
  esac
- 
+
 +# container check
 +if [ ! $CONTAINER ]; then
 +
@@ -250,7 +257,7 @@ cat >$rootfs/tmp/rcs.patch <<'EOF'
 @@ -53,6 +62,8 @@
    fi
  fi
- 
+
 +fi # end container check
 +
  # Run any local shutdown scripts:
@@ -259,7 +266,7 @@ cat >$rootfs/tmp/rcs.patch <<'EOF'
 @@ -141,6 +152,9 @@
    sleep 2
  fi
- 
+
 +# container check
 +if [ ! $CONTAINER ]; then
 +
@@ -269,14 +276,14 @@ cat >$rootfs/tmp/rcs.patch <<'EOF'
 @@ -148,16 +162,23 @@
    /bin/sleep 5
  fi
- 
+
 +fi # end container check
 +
  # Turn off process accounting:
  if [ -x /sbin/accton -a -r /var/log/pacct ]; then
    /sbin/accton off
  fi
- 
+
 +# container check
 +if [ ! $CONTAINER ]; then
 +
@@ -284,7 +291,7 @@ cat >$rootfs/tmp/rcs.patch <<'EOF'
  if [ -x /etc/rc.d/rc.acpid -a -r /var/run/acpid.pid ]; then # quit
    . /etc/rc.d/rc.acpid stop
  fi
- 
+
 +fi # end container check
 +
  # Kill all processes.
@@ -293,7 +300,7 @@ cat >$rootfs/tmp/rcs.patch <<'EOF'
 @@ -169,6 +190,9 @@
    /sbin/killall5 -9
  fi
- 
+
 +# container check
 +if [ ! $CONTAINER ]; then
 +
@@ -303,7 +310,7 @@ cat >$rootfs/tmp/rcs.patch <<'EOF'
 @@ -177,6 +201,8 @@
    fi
  fi
- 
+
 +fi # end container check
 +
  # Carry a random seed between reboots.
@@ -312,7 +319,7 @@ cat >$rootfs/tmp/rcs.patch <<'EOF'
 @@ -195,6 +221,9 @@
    rm -f /var/lock/subsys/*
  fi
- 
+
 +# container check
 +if [ ! $CONTAINER ]; then
 +
@@ -322,12 +329,12 @@ cat >$rootfs/tmp/rcs.patch <<'EOF'
 @@ -206,9 +235,14 @@
  echo "Remounting root filesystem read-only."
  /bin/mount -v -n -o remount,ro /
- 
+
 +fi # end container check
 +
  # This never hurts:
  /bin/sync
- 
+
 +# container check
 +if [ ! $CONTAINER ]; then
 +
@@ -337,29 +344,29 @@ cat >$rootfs/tmp/rcs.patch <<'EOF'
 @@ -272,3 +306,8 @@
    /sbin/poweroff
  fi
- 
+
 +fi # end container check
 +
 +# confirm successful shutdown
 +echo ; echo "* container stopped. *" ; echo
 +
---- ./etc/rc.d/rc.M.orig	2011-07-20 11:13:38.332252512 +0200
-+++ ./etc/rc.d/rc.M	2011-07-20 13:22:23.206678301 +0200
+--- ./etc/rc.d/rc.M.orig    2011-07-20 11:13:38.332252512 +0200
++++ ./etc/rc.d/rc.M 2011-07-20 13:22:23.206678301 +0200
 @@ -10,6 +10,10 @@
- # Author:	Fred N. van Kempen, <waltje@uwalt.nl.mugnet.org>
- #		Heavily modified by Patrick Volkerding <volkerdi@slackware.com>
+ # Author:  Fred N. van Kempen, <waltje@uwalt.nl.mugnet.org>
+ #      Heavily modified by Patrick Volkerding <volkerdi@slackware.com>
  #
 +# tweaks for an lxc container by ponce <matteo.bernardini@gmail.com>,
 +# a check for a CONTAINER variable is made to jump unneeded sections
 +
 +CONTAINER=yes
- 
+
  # Tell the viewers what's going to happen.
  echo "Going multiuser..."
 @@ -20,6 +24,9 @@
    /sbin/ldconfig &
  fi
- 
+
 +# container check
 +if [ ! $CONTAINER ]; then
 +
@@ -369,14 +376,14 @@ cat >$rootfs/tmp/rcs.patch <<'EOF'
 @@ -33,6 +40,8 @@
    /bin/hostname darkstar
  fi
- 
+
 +fi # end container check
 +
  # Set the permissions on /var/log/dmesg according to whether the kernel
  # permits non-root users to access kernel dmesg information:
  if [ -r /proc/sys/kernel/dmesg_restrict ]; then
---- ./etc/rc.d/rc.inet1.orig	2011-07-20 11:13:56.671023244 +0200
-+++ ./etc/rc.d/rc.inet1	2011-07-20 11:14:26.553649659 +0200
+--- ./etc/rc.d/rc.inet1.orig    2011-07-20 11:13:56.671023244 +0200
++++ ./etc/rc.d/rc.inet1 2011-07-20 11:14:26.553649659 +0200
 @@ -3,6 +3,11 @@
  # This script is used to bring up the various network interfaces.
  #
@@ -386,7 +393,7 @@ cat >$rootfs/tmp/rcs.patch <<'EOF'
 +# a check for a CONTAINER variable is made to jump unneeded sections
 +
 +CONTAINER=yes
- 
+
  ############################
  # READ NETWORK CONFIG FILE #
 @@ -82,6 +87,10 @@
@@ -433,8 +440,8 @@ download_salix()
 {
 mkdir -p "$cache/partial-$SUITE-$arch"
 if [ $? -ne 0 ]; then
-	echo "Failed to create '$cache/partial-$SUITE-$arch' directory"
-	return 1
+    echo "Failed to create '$cache/partial-$SUITE-$arch' directory"
+    return 1
 fi
 
 # download the packages tar archive into a cache folder
@@ -446,8 +453,8 @@ wget -c $MIRROR/salix-core-$SUITE-$arch.tar
 )
 
 if [ $? -ne 0 ]; then
-	echo "Failed to download the packages tar archive, aborting."
-	return 1
+    echo "Failed to download the packages tar archive, aborting."
+    return 1
 fi
 
 mv "$cache/partial-$SUITE-$arch" "$cache/cache-$SUITE-$arch"
@@ -494,29 +501,29 @@ mkdir -p /var/lock/subsys/
 (
 flock -n -x 200
 if [ $? -ne 0 ]; then
-	echo "Cache repository is busy."
-	return 1
+    echo "Cache repository is busy."
+    return 1
 fi
 
 echo "Checking cache download in $cache/cache-$SUITE-$arch ... "
 if [ ! -e "$cache/cache-$SUITE-$arch" ]; then
-	download_salix
-	if [ $? -ne 0 ]; then
-		echo "Failed to download Salix core tar packages."
-		return 1
-	fi
+    download_salix
+    if [ $? -ne 0 ]; then
+        echo "Failed to download Salix core tar packages."
+        return 1
+    fi
 fi
 
 echo "Installing packages in $cache/rootfs-$SUITE-$arch ... "
 if [ -e "$cache/rootfs-$SUITE-$arch" ]; then
-	echo "cleaning up existing $cache/rootfs-$SUITE-$arch ... "
-	rm -fR "$cache/rootfs-$SUITE-$arch"
+    echo "cleaning up existing $cache/rootfs-$SUITE-$arch ... "
+    rm -fR "$cache/rootfs-$SUITE-$arch"
 fi
 mkdir -p "$cache/rootfs-$SUITE-$arch"
 
 # installing pkgs
 for package in $cache/cache-$SUITE-$arch/*.t?z ; do
-	installpkg -root $cache/rootfs-$SUITE-$arch -terse -priority ADD $package
+    installpkg -root $cache/rootfs-$SUITE-$arch -terse -priority ADD $package
 done
 
 return 0
@@ -571,8 +578,8 @@ lxc.cap.drop = setfcap setpcap sys_boot
 EOF
 
 if [ $? -ne 0 ]; then
-	echo "Failed to add configuration."
-	return 1
+    echo "Failed to add configuration."
+    return 1
 fi
 
 return 0
@@ -581,15 +588,15 @@ return 0
 clean()
 {
 if [ ! -e $cache ]; then
-	exit 0
+    exit 0
 fi
 
 # lock, so we won't purge while someone is creating a repository
 (
 flock -n -x 200
 if [ $? != 0 ]; then
-	echo "Cache repository is busy."
-	exit 1
+    echo "Cache repository is busy."
+    exit 1
 fi
 
 echo -n "Purging the download cache..."
@@ -611,8 +618,8 @@ set -e
 
 options=$(getopt -o hp:n:c -l help,path:,name:,clean -- "$@")
 if [ $? -ne 0 ]; then
-	usage $(basename $0)
-	exit 1
+    usage $(basename $0)
+    exit 1
 fi
 eval set -- "$options"
 
@@ -621,37 +628,37 @@ do
 case "$1" in
         -h|--help)      usage $0 && exit 0;;
         -p|--path)      path=$2; shift 2;;
-	-n|--name)      name=$2; shift 2;;
-	-c|--clean)     clean=$2; shift 2;;
+    -n|--name)      name=$2; shift 2;;
+    -c|--clean)     clean=$2; shift 2;;
         --)             shift 1; break ;;
         *)              break ;;
 esac
 done
 
 if [ ! -z "$clean" -a -z "$path" ]; then
-	clean || exit 1
-	exit 0
+    clean || exit 1
+    exit 0
 fi
 
 type installpkg
 if [ $? -ne 0 ]; then
-	echo "'installpkg' command is missing."
-	exit 1
+    echo "'installpkg' command is missing."
+    exit 1
 fi
 
 if [ -z "$path" ]; then
-	echo "'path' parameter is required."
-	exit 1
+    echo "'path' parameter is required."
+    exit 1
 fi
 
 if [ "$(id -u)" != "0" ]; then
-	echo "This script should be run as 'root'."
-	exit 1
+    echo "This script should be run as 'root'."
+    exit 1
 fi
 
 if [ -z "$name" ]; then
-	# no name given? set a default one
-	name=salix-$SUITE-$arch
+    # no name given? set a default one
+    name=salix-$SUITE-$arch
 fi
 
 echo
@@ -659,16 +666,16 @@ echo
 rootfs=$path/rootfs
 install_salix $rootfs
 if [ $? -ne 0 ]; then
-	echo "Failed to install Salix."
-	exit 1
+    echo "Failed to install Salix."
+    exit 1
 fi
 
 echo
 
 configure_salix $cache/rootfs-$SUITE-$arch $name
 if [ $? -ne 0 ]; then
-	echo "Failed to configure Salix for a container."
-	exit 1
+    echo "Failed to configure Salix for a container."
+    exit 1
 fi
 
 echo
@@ -676,19 +683,19 @@ echo
 rootfs=$path/rootfs
 copy_salix $rootfs
 if [ $? -ne 0 ]; then
-	echo "Failed to copy rootfs."
-	return 1
+    echo "Failed to copy rootfs."
+    return 1
 fi
 
 echo
 
 copy_configuration $path $rootfs $name
 if [ $? -ne 0 ]; then
-	echo "Failed to write configuration file."
-	exit 1
+    echo "Failed to write configuration file."
+    exit 1
 fi
 
 if [ ! -z $clean ]; then
-	clean || exit 1
-	exit 0
+    clean || exit 1
+    exit 0
 fi
