@@ -100,34 +100,38 @@ cp $rootfs/etc/HOSTNAME $rootfs/etc/hostname
 
 DEV=$rootfs/dev
 
-mkdir -p ${DEV}
-mkdir -m 755 -p ${DEV}/pts
-mkdir -m 1777 -p ${DEV}/shm
+# cleanup & creat the few devices needed by the container
 
-# check if device exists before creating it
+rm -rf ${DEV} 
+mkdir ${DEV}
 
-[ ! -c ${DEV}/null ] && mknod -m 666 ${DEV}/null c 1 3
-[ ! -c ${DEV}/zero ] && mknod -m 666 ${DEV}/zero c 1 5
-[ ! -c ${DEV}/random ] && mknod -m 666 ${DEV}/random c 1 8
-[ ! -c ${DEV}/urandom ] && mknod -m 666 ${DEV}/urandom c 1 9
-[ ! -c ${DEV}/tty ] && mknod -m 666 ${DEV}/tty c 5 0
-[ ! -c ${DEV}/console ] && mknod -m 600 ${DEV}/console c 5 1
-[ ! -c ${DEV}/tty0 ] && mknod -m 666 ${DEV}/tty0 c 4 0
-[ ! -c ${DEV}/tty1 ] && mknod -m 666 ${DEV}/tty1 c 4 1
-[ ! -c ${DEV}/tty2 ] && mknod -m 666 ${DEV}/tty2 c 4 2
-[ ! -c ${DEV}/tty3 ] && mknod -m 666 ${DEV}/tty3 c 4 3
-[ ! -c ${DEV}/tty4 ] && mknod -m 666 ${DEV}/tty4 c 4 4
-[ ! -c ${DEV}/tty5 ] && mknod -m 666 ${DEV}/tty5 c 4 5
-[ ! -c ${DEV}/full ] && mknod -m 666 ${DEV}/full c 1 7
-[ ! -p ${DEV}/initctl ] && mknod -m 600 ${DEV}/initctl p
-[ ! -b ${DEV}/loop0 ] && mknod -m 660 ${DEV}/loop0 b 7 0
-[ ! -b ${DEV}/loop1 ] && mknod -m 660 ${DEV}/loop1 b 7 1
+mkdir -m 755 ${DEV}/pts
+mkdir -m 1777 ${DEV}/shm
+
+
+mknod -m 666 ${DEV}/null c 1 3
+mknod -m 666 ${DEV}/zero c 1 5
+mknod -m 666 ${DEV}/random c 1 8
+mknod -m 666 ${DEV}/urandom c 1 9
+mknod -m 666 ${DEV}/tty c 5 0
+mknod -m 600 ${DEV}/console c 5 1
+mknod -m 666 ${DEV}/tty0 c 4 0
+mknod -m 666 ${DEV}/tty1 c 4 1
+mknod -m 666 ${DEV}/tty2 c 4 2
+mknod -m 666 ${DEV}/tty3 c 4 3
+mknod -m 666 ${DEV}/tty4 c 4 4
+mknod -m 666 ${DEV}/tty5 c 4 5
+mknod -m 666 ${DEV}/full c 1 7
+mknod -m 600 ${DEV}/initctl p
+mknod -m 660 ${DEV}/loop0 b 7 0
+mknod -m 660 ${DEV}/loop1 b 7 1
 
 rm ${DEV}/ptmx
 ln -s pts/ptmx ${DEV}/ptmx
 
 echo "Adding an etc/fstab that must be edited later"
 echo "with the full path of the container if you move it."
+
 cat >$rootfs/etc/fstab <<EOF
 lxcpts $rootfs/dev/pts devpts defaults,newinstance 0 0
 none $rootfs/proc    proc   defaults 0 0
