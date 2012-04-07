@@ -467,7 +467,7 @@ fi
 echo "Downloading Salix OS core packages..."
 (
 cd $cache/partial-$SUITE-$arch
-wget -c $MIRROR/salix-core-$SUITE-$arch.tar.sha1 && \
+wget -c $MIRROR/salix-core-$SUITE-$arch.tar.sha256 && \
 wget -c $MIRROR/salix-core-$SUITE-$arch.tar
 )
 
@@ -480,13 +480,13 @@ mv "$cache/partial-$SUITE-$arch" "$cache/cache-$SUITE-$arch"
 echo "Download complete." ; echo
 
 #
-# file integrity whith sha1sum
+# file integrity whith sha256sum
 
 echo "Checking file integrity..."
 
 (
 cd $cache/cache-$SUITE-$arch
-CHECK=`sha1sum -c salix-core-$SUITE-$arch.tar.sha1 | sed 's/^.* //'`
+CHECK=`sha256sum -c salix-core-$SUITE-$arch.tar.sha256 | sed 's/^.* //'`
     if [ "$CHECK" != "OK" ]; then
         echo "Tar archive is corrupted, removing and aborting..."
         rm *tar*
@@ -718,3 +718,4 @@ if [ ! -z $clean ]; then
     clean || exit 1
     exit 0
 fi
+
