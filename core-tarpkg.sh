@@ -42,7 +42,7 @@ find /var/slapt-get -name *.t[gx]z -exec cp {} $TAR \;
     rm mkinitrd*
     ls . > ../$TAR.pkglist
     tar ccvf $TAR.tar .
-    sha1sum $TAR.tar > ../$TAR.tar.sha1
+    sha256sum $TAR.tar > ../$TAR.tar.sha1
     mv $TAR.tar ../
 )
 
