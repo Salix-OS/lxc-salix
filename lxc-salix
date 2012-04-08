@@ -126,7 +126,6 @@ mknod -m 600 ${DEV}/initctl p
 mknod -m 660 ${DEV}/loop0 b 7 0
 mknod -m 660 ${DEV}/loop1 b 7 1
 
-rm ${DEV}/ptmx
 ln -s pts/ptmx ${DEV}/ptmx
 
 echo "Adding an etc/fstab that must be edited later"
@@ -505,7 +504,7 @@ rootfs=$1
 
 # make a local copy of the installed filesystem
 echo -n "Copying rootfs to $rootfs..."
-cp -a "$cache/rootfs-$SUITE-$arch" $rootfs || return 1
+cp -a "$cache/$rootfs-$SUITE-$arch" $rootfs || return 1
 
 # fix fstab with the actual path
 sed -i -e "s|$cache/rootfs-$SUITE-$arch|$rootfs|" $rootfs/etc/fstab
