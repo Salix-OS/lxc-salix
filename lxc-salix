@@ -454,8 +454,12 @@ else
     LIBDIRSUFFIX=""
 fi
 
-ln -s $rootfs/usr/lib${LIBDIRSUFFIX}/libcrypto.so $rootfs/usr/lib${LIBDIRSUFFIX}/libcryto.so.0
-ln -s $rootfs/usr/lib${LIBDIRSUFFIX}/libssl.so $rootfs/usr/lib${LIBDIRSUFFIX}/libssl.so.0
+( 
+cd $rootfs/usr/lib${LIBDIRSUFFIX}
+ln -s libcrypto.so libcryto.so.0
+ln -s libssl.so libssl.so.0
+)
+
 
 # add a message to rc.local that confirms successful container startup
 echo "echo ; echo \"* container $name started. *\" ; echo" >> $rootfs/etc/rc.d/rc.local
