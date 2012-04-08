@@ -460,6 +460,9 @@ ln -s libcrypto.so libcryto.so.0
 ln -s libssl.so libssl.so.0
 )
 
+# do not run sshd and ntpd daemon by default
+chmod -x $rootfs/etc/rc.d/rc.ntpd
+chmod -x $rootfs/etc/rc.d/rc.sshd
 
 # add a message to rc.local that confirms successful container startup
 echo "echo ; echo \"* container $name started. *\" ; echo" >> $rootfs/etc/rc.d/rc.local
