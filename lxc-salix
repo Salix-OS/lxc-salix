@@ -444,6 +444,9 @@ echo "/etc/rc.d/rc.inet1 restart" >> $rootfs/etc/rc.d/rc.local
 # reduce the number of local consoles: two should be enough
 sed -i '/^c3\|^c4\|^c5\|^c6/s/^/# /' $rootfs/etc/inittab
 
+# set the default runlevel to 3
+sed -i s@id:4:initdefault:@id:3:initdefault:@ $rootfs/etc/inittab 
+
 # add a message to rc.local that confirms successful container startup
 echo "echo ; echo \"* container $name started. *\" ; echo" >> $rootfs/etc/rc.d/rc.local
 
