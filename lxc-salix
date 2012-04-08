@@ -447,6 +447,16 @@ sed -i '/^c3\|^c4\|^c5\|^c6/s/^/# /' $rootfs/etc/inittab
 # set the default runlevel to 3
 sed -i s@id:4:initdefault:@id:3:initdefault:@ $rootfs/etc/inittab 
 
+# fix some broken links
+if [ $arch == "x86_64" ]; then
+    LIBDIRSUFFIX="64"
+else
+    LIBDIRSUFFIX=""
+fi
+
+ln -s $rootfs/usr/lib${LIBDIRSUFFIX}/libcrypto.so $rootfs/usr/lib${LIBDIRSUFFIX}/libcryto.so.0
+ln -s $rootfs/usr/lib${LIBDIRSUFFIX}/libssl.so $rootfs/usr/lib${LIBDIRSUFFIX}/libssl.so.0
+
 # add a message to rc.local that confirms successful container startup
 echo "echo ; echo \"* container $name started. *\" ; echo" >> $rootfs/etc/rc.d/rc.local
 
