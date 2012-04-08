@@ -504,7 +504,7 @@ rootfs=$1
 
 # make a local copy of the installed filesystem
 echo -n "Copying rootfs to $rootfs..."
-cp -a "$cache/$rootfs-$SUITE-$arch" $rootfs || return 1
+cp -a "$cache/rootfs-$SUITE-$arch" $rootfs || return 1
 
 # fix fstab with the actual path
 sed -i -e "s|$cache/rootfs-$SUITE-$arch|$rootfs|" $rootfs/etc/fstab
